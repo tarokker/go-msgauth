@@ -99,6 +99,14 @@ type VerifyOptions struct {
 	// signatures are verified, the rest are ignored and ErrTooManySignatures
 	// is returned. If zero, there is no maximum.
 	MaxVerifications int
+	// Pedantic controls additional behavioral flags
+	// These options allow relaxing or tightening specific checks.
+	Pedantic struct {
+		// AllowSHA1Signing determines whether SHA-1 signed DKIM signatures
+		// should be accepted during validation.
+		// By default, SHA-1 is considered insecure and SHOULD be rejected.
+		AllowSHA1Signing bool
+	}
 }
 
 // Verify checks if a message's signatures are valid. It returns one
@@ -316,7 +324,10 @@ func verify(h header, r io.Reader, sigField, sigValue string, options *VerifyOpt
 	case "sha1":
 		// RFC 8301 section 3.1: rsa-sha1 MUST NOT be used for signing or
 		// verifying.
-		return verif, permFailError(fmt.Sprintf("hash algorithm too weak: %v", hashAlgo))
+		if options == nil || !options.Pedantic.AllowSHA1Signing {
+			return verif, permFailError(fmt.Sprintf("hash algorithm too weak: %v", hashAlgo))
+		}
+		hash = crypto.SHA1
 	case "sha256":
 		hash = crypto.SHA256
 	default:
