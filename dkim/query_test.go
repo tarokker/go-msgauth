@@ -22,15 +22,15 @@ func init() {
 	queryMethods["dns/txt"] = queryTest
 }
 
-func queryTest(domain, selector string, txtLookup txtLookupFunc) (*queryResult, error) {
+func queryTest(domain, selector string, options *VerifyOptions) (*queryResult, error) {
 	record := selector + "._domainkey." + domain
 	switch record {
 	case "brisbane._domainkey.example.com", "brisbane._domainkey.example.org", "test._domainkey.football.example.com":
-		return parsePublicKey(dnsPublicKey)
+		return parsePublicKey(dnsPublicKey, 0)
 	case "newengland._domainkey.example.com":
-		return parsePublicKey(dnsRawRSAPublicKey)
+		return parsePublicKey(dnsRawRSAPublicKey, 0)
 	case "brisbane._domainkey.football.example.com":
-		return parsePublicKey(dnsEd25519PublicKey)
+		return parsePublicKey(dnsEd25519PublicKey, 0)
 	}
 	return nil, fmt.Errorf("unknown test DNS record %v", record)
 }

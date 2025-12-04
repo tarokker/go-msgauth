@@ -106,6 +106,9 @@ type VerifyOptions struct {
 		// should be accepted during validation.
 		// By default, SHA-1 is considered insecure and SHOULD be rejected.
 		AllowSHA1Signing bool
+		// MinimumRSALength determines the minimum RSA key length that is allowed
+		// on verification. If 0, uses the default of 1024.
+		MinimumRSALength int
 	}
 }
 
@@ -286,11 +289,7 @@ func verify(h header, r io.Reader, sigField, sigValue string, options *VerifyOpt
 	var res *queryResult
 	for _, method := range methods {
 		if query, ok := queryMethods[QueryMethod(method)]; ok {
-			if options != nil {
-				res, err = query(verif.Domain, stripWhitespace(params["s"]), options.LookupTXT)
-			} else {
-				res, err = query(verif.Domain, stripWhitespace(params["s"]), nil)
-			}
+			res, err = query(verif.Domain, stripWhitespace(params["s"]), options)
 			break
 		}
 	}
