@@ -18,19 +18,23 @@ const dnsPublicKey = "v=DKIM1; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ" +
 
 const dnsEd25519PublicKey = "v=DKIM1; k=ed25519; p=11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo="
 
+const dnsShortPublicKey = "v=DKIM1; p=MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALBNzlc7mGoSwWAsRGkBZpmLv4qJncyLJuRGmmeC5X0hbK/dQMZ/UM60btRY6aBnOab8t544RdIs6aH9dWYhGikCAwEAAQ=="
+
 func init() {
 	queryMethods["dns/txt"] = queryTest
 }
 
-func queryTest(domain, selector string, txtLookup txtLookupFunc) (*queryResult, error) {
+func queryTest(domain, selector string, options *VerifyOptions) (*queryResult, error) {
 	record := selector + "._domainkey." + domain
 	switch record {
 	case "brisbane._domainkey.example.com", "brisbane._domainkey.example.org", "test._domainkey.football.example.com":
-		return parsePublicKey(dnsPublicKey)
+		return parsePublicKey(dnsPublicKey, 0)
 	case "newengland._domainkey.example.com":
-		return parsePublicKey(dnsRawRSAPublicKey)
+		return parsePublicKey(dnsRawRSAPublicKey, 0)
 	case "brisbane._domainkey.football.example.com":
-		return parsePublicKey(dnsEd25519PublicKey)
+		return parsePublicKey(dnsEd25519PublicKey, 0)
+	case "short._domainkey.example.com":
+		return parsePublicKey(dnsShortPublicKey, 512)
 	}
 	return nil, fmt.Errorf("unknown test DNS record %v", record)
 }

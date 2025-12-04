@@ -63,15 +63,16 @@ const (
 )
 
 type txtLookupFunc func(domain string) ([]string, error)
-type queryFunc func(domain, selector string, txtLookup txtLookupFunc) (*queryResult, error)
+type queryFunc func(domain, selector string, options *VerifyOptions) (*queryResult, error)
 
 var queryMethods = map[QueryMethod]queryFunc{
 	QueryMethodDNSTXT: queryDNSTXT,
 }
 
-func queryDNSTXT(domain, selector string, txtLookup txtLookupFunc) (*queryResult, error) {
-	if txtLookup == nil {
-		txtLookup = net.LookupTXT
+func queryDNSTXT(domain, selector string, options *VerifyOptions) (*queryResult, error) {
+	var txtLookup txtLookupFunc = net.LookupTXT
+	if options != nil && options.LookupTXT != nil {
+		txtLookup = options.LookupTXT
 	}
 
 	txts, err := txtLookup(selector + "._domainkey." + domain)
@@ -91,14 +92,21 @@ func queryDNSTXT(domain, selector string, txtLookup txtLookupFunc) (*queryResult
 	case 0:
 		return nil, permFailError("no valid key found")
 	case 1:
-		return parsePublicKey(txts[0])
+		minRSA := 0
+		if options != nil {
+			minRSA = options.Pedantic.MinimumRSALength
+		}
+		return parsePublicKey(txts[0], minRSA)
 	default:
 		return nil, permFailError("multiple TXT records found for key")
 	}
 }
 
-func parsePublicKey(s string) (*queryResult, error) {
+func parsePublicKey(s string, minRSA int) (*queryResult, error) {
 	params, err := parseHeaderParams(s)
+	if minRSA <= 0 {
+		minRSA = defaultMinimumRSALength
+	}
 	if err != nil {
 		return nil, permFailError("key record error: " + err.Error())
 	}
@@ -140,8 +148,8 @@ func parsePublicKey(s string) (*queryResult, error) {
 		}
 		// RFC 8301 section 3.2: verifiers MUST NOT consider signatures using
 		// RSA keys of less than 1024 bits as valid signatures.
-		if rsaPub.Size()*8 < 1024 {
-			return nil, permFailError(fmt.Sprintf("key is too short: want 1024 bits, has %v bits", rsaPub.Size()*8))
+		if rsaPub.Size()*8 < minRSA {
+			return nil, permFailError(fmt.Sprintf("key is too short: want %d bits, has %v bits", minRSA, rsaPub.Size()*8))
 		}
 		res.Verifier = rsaVerifier{rsaPub}
 		res.KeyAlgo = "rsa"

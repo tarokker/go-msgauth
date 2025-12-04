@@ -20,4 +20,7 @@ import (
 
 var now = time.Now
 
-const headerFieldName = "DKIM-Signature"
+const (
+	headerFieldName         = "DKIM-Signature"
+	defaultMinimumRSALength = 1024
+)
