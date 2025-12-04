@@ -294,3 +294,36 @@ func TestVerify_tooManySignatures(t *testing.T) {
 		t.Fatalf("Expected %v verifications, got %v", options.MaxVerifications, len(verifs))
 	}
 }
+
+const shortMailString = `DKIM-Signature: v=1; a=rsa-sha1; c=relaxed; d=example.com; h=from:to
+	:subject:date:message-id; s=short; bh=2jmj7l5rSw0yVb/vlWAYkK/YBw
+	k=; b=mGlY0icwxsTaVBvTrYQPfwPCXX1FrTpF+XYe9fdNqJAnc0On8ZSyv25IRC
+	7rJ2St6z9Q9v1uxAGfY26wY+pzYA==
+From: Joe SixPack <joe@example.com>
+To: Suzie Q <suzie@shopping.example.net>
+Subject: Is the beer cold?
+Date: Thu, 04 Dec 2025 16:59:46 +0100 (CET)
+Message-ID: <20251204155946.12345@example.com>
+
+Hi.
+
+We won the game. Did the NSA hack us yet?
+
+Joe.`
+
+func TestVerifyShort(t *testing.T) {
+	r := strings.NewReader(shortMailString)
+	options := VerifyOptions{}
+	options.Pedantic.AllowSHA1Signing = true
+	options.Pedantic.MinimumRSALength = 512
+	verifs, err := VerifyWithOptions(r, &options)
+	if err != nil {
+		t.Fatalf("Did not expect error, got %v", err)
+	}
+	if len(verifs) != 1 {
+		t.Fatalf("Expected 1 verification, got %d", len(verifs))
+	}
+	if verifs[0].Domain != "example.com" {
+		t.Fatalf("Expected example.com verification, got %s", verifs[0].Domain)
+	}
+}
